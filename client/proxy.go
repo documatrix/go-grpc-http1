@@ -21,6 +21,8 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
+	"path"
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
@@ -79,7 +81,7 @@ func writeError(w http.ResponseWriter, err error) {
 	w.Header().Set("Grpc-Message", grpcproto.EncodeGrpcMessage(errMsg))
 }
 
-func createReverseProxy(endpoint string, transport http.RoundTripper, insecure, forceDowngrade bool) *httputil.ReverseProxy {
+func createReverseProxy(host string, basePath string, transport http.RoundTripper, insecure, forceDowngrade bool) *httputil.ReverseProxy {
 	scheme := "https"
 	if insecure {
 		scheme = "http"
@@ -96,7 +98,10 @@ func createReverseProxy(endpoint string, transport http.RoundTripper, insecure, 
 			}
 			req.Header.Add("Accept", "application/grpc-web")
 			req.URL.Scheme = scheme
-			req.URL.Host = endpoint
+			req.URL.Host = host
+			if basePath != "" {
+				req.URL.Path = path.Join(basePath, req.URL.Path)
+			}
 		},
 		Transport:      transport,
 		ModifyResponse: modifyResponse,
@@ -141,12 +146,12 @@ func createTransport(tlsClientConf *tls.Config, forceHTTP2 bool, extraH2ALPNs []
 	return transport, nil
 }
 
-func createClientProxy(endpoint string, tlsClientConf *tls.Config, forceHTTP2, forceDowngrade bool, extraH2ALPNs []string) (*http.Server, pipeconn.DialContextFunc, error) {
+func createClientProxy(host string, basePath string, tlsClientConf *tls.Config, forceHTTP2, forceDowngrade bool, extraH2ALPNs []string) (*http.Server, pipeconn.DialContextFunc, error) {
 	transport, err := createTransport(tlsClientConf, forceHTTP2, extraH2ALPNs)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "creating transport")
 	}
-	proxy := createReverseProxy(endpoint, transport, tlsClientConf == nil, forceDowngrade)
+	proxy := createReverseProxy(host, basePath, transport, tlsClientConf == nil, forceDowngrade)
 	return makeProxyServer(proxy)
 }
 
@@ -158,6 +163,11 @@ func createClientProxy(endpoint string, tlsClientConf *tls.Config, forceHTTP2, f
 // Using gRPC-Web "downgrades" will only allow for non-streaming gRPC requests, but will only downgrade if necessary.
 // This method supports server-streaming requests, but only if there isn't a proxy in the middle that buffers chunked responses.
 func ConnectViaProxy(ctx context.Context, endpoint string, tlsClientConf *tls.Config, opts ...ConnectOption) (*grpc.ClientConn, error) {
+	host, basePath, err := parseEndpoint(endpoint)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing endpoint")
+	}
+
 	var connectOpts connectOptions
 	for _, opt := range opts {
 		opt.apply(&connectOpts)
@@ -165,12 +175,11 @@ func ConnectViaProxy(ctx context.Context, endpoint string, tlsClientConf *tls.Co
 
 	var proxy *http.Server
 	var dialCtx pipeconn.DialContextFunc
-	var err error
 
 	if connectOpts.useWebSocket {
-		proxy, dialCtx, err = createClientWSProxy(endpoint, tlsClientConf)
+		proxy, dialCtx, err = createClientWSProxy(host, basePath, tlsClientConf)
 	} else {
-		proxy, dialCtx, err = createClientProxy(endpoint, tlsClientConf, connectOpts.forceHTTP2, connectOpts.forceDowngrade, connectOpts.extraH2ALPNs)
+		proxy, dialCtx, err = createClientProxy(host, basePath, tlsClientConf, connectOpts.forceHTTP2, connectOpts.forceDowngrade, connectOpts.extraH2ALPNs)
 	}
 
 	if err != nil {
@@ -231,4 +240,12 @@ func closeServerOnConnShutdown(srv *http.Server, cc *grpc.ClientConn) {
 	if err := srv.Close(); err != nil {
 		glog.Warningf("Error closing gRPC proxy server: %v", err)
 	}
+}
+
+func parseEndpoint(endpoint string) (host string, basePath string, err error) {
+	u, err := url.ParseRequestURI("http://" + endpoint)
+	if err != nil {
+		return
+	}
+	return u.Host, u.Path, nil
 }
