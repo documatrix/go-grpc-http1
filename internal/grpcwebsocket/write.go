@@ -19,7 +19,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/golang/glog"
+	log "github.com/sirupsen/logrus"
 	"golang.stackrox.io/grpc-http1/internal/grpcproto"
 	"golang.stackrox.io/grpc-http1/internal/ioutils"
 	"nhooyr.io/websocket"
@@ -41,7 +41,7 @@ func Write(ctx context.Context, conn *websocket.Conn, r io.Reader, sender string
 				return nil
 			}
 
-			glog.V(2).Infof("Malformed gRPC message when reading header sent from %s: %v", sender, err)
+			log.Infof("Malformed gRPC message when reading header sent from %s: %v", sender, err)
 			return err
 		}
 
@@ -54,16 +54,16 @@ func Write(ctx context.Context, conn *websocket.Conn, r io.Reader, sender string
 		if n, err := io.CopyN(&msg, r, int64(length)); err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				err = io.ErrUnexpectedEOF
-				glog.V(2).Infof("Malformed gRPC message: fewer than the announced %d bytes in payload %s wants to send: %d", length, sender, n)
+				log.Infof("Malformed gRPC message: fewer than the announced %d bytes in payload %s wants to send: %d", length, sender, n)
 			} else {
-				glog.V(2).Infof("Unable to read gRPC message %s wants to send: %v", sender, err)
+				log.Infof("Unable to read gRPC message %s wants to send: %v", sender, err)
 			}
 			return err
 		}
 
 		// Write the entire message frame along the WebSocket connection.
 		if err := conn.Write(ctx, websocket.MessageBinary, msg.Bytes()); err != nil {
-			glog.V(2).Infof("Unable to write gRPC message from %s: %v", sender, err)
+			log.Infof("Unable to write gRPC message from %s: %v", sender, err)
 			return err
 		}
 	}

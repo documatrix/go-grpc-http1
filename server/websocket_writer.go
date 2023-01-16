@@ -20,7 +20,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/golang/glog"
+	log "github.com/sirupsen/logrus"
 	"golang.stackrox.io/grpc-http1/internal/grpcproto"
 	"golang.stackrox.io/grpc-http1/internal/sliceutils"
 )
@@ -63,7 +63,7 @@ func (w *wsResponseWriter) WriteHeader(statusCode int) {
 	}
 
 	if statusCode != http.StatusOK && statusCode != http.StatusUnsupportedMediaType {
-		glog.Errorf("gRPC server sending unexpected status code: %d", statusCode)
+		log.Errorf("gRPC server sending unexpected status code: %d", statusCode)
 	}
 
 	hdr := w.header

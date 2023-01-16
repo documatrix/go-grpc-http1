@@ -3,8 +3,8 @@ module golang.stackrox.io/grpc-http1
 go 1.18
 
 require (
-	github.com/golang/glog v1.0.0
 	github.com/pkg/errors v0.9.1
+	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
 	golang.org/x/net v0.4.0

@@ -24,8 +24,8 @@ import (
 	"net/url"
 	"path"
 
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"golang.stackrox.io/grpc-http1/internal/grpcproto"
@@ -203,7 +203,7 @@ func makeProxyServer(handler http.Handler) (*http.Server, pipeconn.DialContextFu
 
 	go func() {
 		if err := srv.Serve(lis); err != nil && err != http.ErrServerClosed {
-			glog.Warningf("Unexpected error returned from serving gRPC proxy server: %v", err)
+			log.Warningf("Unexpected error returned from serving gRPC proxy server: %v", err)
 		}
 	}()
 
@@ -238,7 +238,7 @@ func closeServerOnConnShutdown(srv *http.Server, cc *grpc.ClientConn) {
 		cc.WaitForStateChange(context.Background(), state)
 	}
 	if err := srv.Close(); err != nil {
-		glog.Warningf("Error closing gRPC proxy server: %v", err)
+		log.Warningf("Error closing gRPC proxy server: %v", err)
 	}
 }
 

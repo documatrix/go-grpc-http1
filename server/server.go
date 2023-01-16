@@ -22,7 +22,7 @@ import (
 	"sync"
 	"unicode"
 
-	"github.com/golang/glog"
+	log "github.com/sirupsen/logrus"
 	"golang.stackrox.io/grpc-http1/internal/grpcweb"
 	"golang.stackrox.io/grpc-http1/internal/grpcwebsocket"
 	"golang.stackrox.io/grpc-http1/internal/size"
@@ -146,7 +146,7 @@ func handleGRPCWeb(w http.ResponseWriter, req *http.Request, validPaths map[stri
 	transcodingWriter, finalize := grpcweb.NewResponseWriter(w)
 	grpcSrv.ServeHTTP(transcodingWriter, req)
 	if err := finalize(); err != nil {
-		glog.Errorf("Error sending trailers in downgraded gRPC web response: %v", err)
+		log.Errorf("Error sending trailers in downgraded gRPC web response: %v", err)
 	}
 }
 
