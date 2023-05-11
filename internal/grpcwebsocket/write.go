@@ -41,7 +41,7 @@ func Write(ctx context.Context, conn *websocket.Conn, r io.Reader, sender string
 				return nil
 			}
 
-			log.Infof("Malformed gRPC message when reading header sent from %s: %v", sender, err)
+			log.Debugf("Malformed gRPC message when reading header sent from %s: %v", sender, err)
 			return err
 		}
 
@@ -54,16 +54,16 @@ func Write(ctx context.Context, conn *websocket.Conn, r io.Reader, sender string
 		if n, err := io.CopyN(&msg, r, int64(length)); err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				err = io.ErrUnexpectedEOF
-				log.Infof("Malformed gRPC message: fewer than the announced %d bytes in payload %s wants to send: %d", length, sender, n)
+				log.Debugf("Malformed gRPC message: fewer than the announced %d bytes in payload %s wants to send: %d", length, sender, n)
 			} else {
-				log.Infof("Unable to read gRPC message %s wants to send: %v", sender, err)
+				log.Debugf("Unable to read gRPC message %s wants to send: %v", sender, err)
 			}
 			return err
 		}
 
 		// Write the entire message frame along the WebSocket connection.
 		if err := conn.Write(ctx, websocket.MessageBinary, msg.Bytes()); err != nil {
-			log.Infof("Unable to write gRPC message from %s: %v", sender, err)
+			log.Debugf("Unable to write gRPC message from %s: %v", sender, err)
 			return err
 		}
 	}

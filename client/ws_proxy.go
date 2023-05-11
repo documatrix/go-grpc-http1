@@ -184,12 +184,12 @@ func setHeader(w http.ResponseWriter, msg []byte, isTrailers bool) error {
 
 func (c *websocketConn) writeToServer(body io.Reader) error {
 	if err := grpcwebsocket.Write(c.ctx, c.conn, body, name); err != nil {
-		log.Infof("Error writing to %q: %v", c.url, err)
+		log.Debugf("Error writing to %q: %v", c.url, err)
 		return err
 	}
 	// Signal to the server there are no more messages in the stream.
 	if err := c.conn.Write(c.ctx, websocket.MessageBinary, grpcproto.EndStreamHeader); err != nil {
-		log.Infof("Error writing EOS to %q: %v", c.url, err)
+		log.Debugf("Error writing EOS to %q: %v", c.url, err)
 		return err
 	}
 
@@ -278,7 +278,7 @@ func (h *http2WebSocketProxy) ServeHTTP(w http.ResponseWriter, req *http.Request
 	}()
 
 	if err := wsConn.readFromServer(); err != nil {
-		log.Infof("Error reading from %q: %v", wsConn.url, err)
+		log.Debugf("Error reading from %q: %v", wsConn.url, err)
 		wsConn.setError(err)
 	}
 
@@ -291,7 +291,7 @@ func (h *http2WebSocketProxy) ServeHTTP(w http.ResponseWriter, req *http.Request
 	// If the connection had an error, write it back to the client.
 	wsConn.writeErrorIfNecessary()
 
-	log.Infof("Closing websocket connection with %q", wsConn.url)
+	log.Debugf("Closing websocket connection with %q", wsConn.url)
 	// It's ok to potentially close the connection multiple times.
 	// Only the first time matters.
 	_ = conn.Close(websocket.StatusNormalClosure, "")
