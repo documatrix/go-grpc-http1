@@ -305,6 +305,7 @@ func createClientWSProxy(host string, basePath string, tlsClientConf *tls.Config
 		httpClient: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: tlsClientConf,
+				Proxy:           http.ProxyFromEnvironment,
 			},
 		},
 	}
